@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Case Files: The Vanishing Hour</title>
+  <style>
+    :root {
+      --ink: #f4efe3;
+      --muted: #aaa598;
+      --paper: #211f1b;
+      --paper-2: #2b2822;
+      --line: #4b463b;
+      --red: #d95c4f;
+      --gold: #d7ad62;
+      --green: #87b88a;
+      --shadow: 0 18px 50px rgb(0 0 0 / 35%);
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: #121210;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgb(104 81 50 / 18%), transparent 38rem),
+        #121210;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .app {
+      width: min(100% - 32px, 1080px);
+      min-width: 0;
+      margin: 0 auto;
+      padding: 16px 0 20px;
+    }
+
+    .masthead {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--gold);
+      font: 700 12px/1.2 Arial, sans-serif;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 0; font-size: clamp(30px, 5vw, 48px); line-height: .95; }
+    h2 { margin-bottom: 8px; font-size: clamp(22px, 3vw, 30px); }
+    h3 { margin-bottom: 5px; font-size: 18px; }
+
+    .timer {
+      min-width: 132px;
+      padding: 9px 14px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font: 700 24px/1 Arial, sans-serif;
+      text-align: center;
+      letter-spacing: .06em;
+    }
+
+    .timer.warning { border-color: var(--red); color: var(--red); }
+    .game-stats { display: flex; gap: 8px; margin-top: 8px; font: 700 12px/1 Arial, sans-serif; }
+    .game-stats span { padding: 6px 9px; border: 1px solid var(--line); color: var(--gold); }
+    .case-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+    .case-picker label { color: var(--muted); font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .case-picker select { margin-left: 5px;     padding: 5px 7px; border: 1px solid var(--line); color: var(--ink); background: var(--paper-2); }
+
+    .phase {
+      display: inline-block;
+      margin: 14px 0 10px;
+      padding: 6px 10px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font: 700 12px/1 Arial, sans-serif;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .case-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+      gap: 14px;
+    }
+
+    .panel {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, var(--paper), #191815);
+      box-shadow: var(--shadow);
+    }
+
+    .case-intro {
+      min-height: 0;
+      border-left: 4px solid var(--red);
+    }
+
+    .case-intro p, .briefing p { max-width: 68ch; margin-bottom: 8px; color: var(--muted); font-size: 14px; line-height: 1.35; }
+
+    .clues {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .clue {
+      width: 100%;
+      min-width: 0;
+      min-height: 62px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      background: var(--paper-2);
+      text-align: left;
+      transition: border-color .2s, transform .2s, background .2s;
+    }
+
+    .clue:hover, .clue:focus-visible {
+      border-color: var(--gold);
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .clue.selected { border-color: var(--gold); background: #373126; }
+    .clue strong { display: block; overflow-wrap: anywhere; margin-bottom: 4px; color: var(--gold); font-size: 15px; }
+    .clue span { color: var(--muted); font: 11px/1.25 Arial, sans-serif; }
+
+    .suspects { display: grid;     gap: 8px; }
+
+    .suspect {
+      position: relative;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: var(--paper-2);
+    }
+
+    .suspect h3 { padding-right: 42px; }
+    .role { color: var(--muted); font: 12px/1.2 Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .alibi { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.3; }
+    .suspect input { position: absolute; top: 12px; right: 12px; width: 18px; height: 18px; accent-color: var(--gold); }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+    .primary, .secondary {
+      min-height: 40px;
+      padding: 10px 13px;
+      font: 700 14px/1 Arial, sans-serif;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .primary { color: #181611; background: var(--gold); }
+    .secondary { border: 1px solid var(--line); color: var(--ink); background: transparent; }
+    .primary:hover, .primary:focus-visible { background: #edc879; }
+    .secondary:hover, .secondary:focus-visible { border-color: var(--gold); }
+    button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+    .status {
+      min-height: 27px;
+      margin: 18px 0 0;
+      color: var(--gold);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .status.success { color: var(--green); }
+    .status.error { color: var(--red); }
+
+    .hidden { display: none !important; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgb(0 0 0 / 78%);
+      z-index: 5;
+    }
+
+    .overlay-card {
+      width: min(100%, 600px);
+      padding: clamp(24px, 5vw, 46px);
+      border: 1px solid var(--red);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .overlay-card h2 { color: var(--red); }
+    .overlay-card p { color: var(--muted); font-size: 18px; line-height: 1.6; }
+    .evidence-overlay .overlay-card { border-color: var(--gold); }
+    .evidence-overlay h2 { color: var(--gold); }
+    .evidence-cost {
+      color: var(--red) !important;
+      font: 700 13px/1.2 Arial, sans-serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    @media (min-width: 761px) {
+      html, body { overflow: hidden; }
+      .app { height: 100dvh; overflow: hidden; }
+      #phase-one, #phase-two { height: calc(100dvh - 170px); }
+      .case-layout { height: calc(100% - 42px); }
+      .case-layout > div,
+      .case-layout > aside { min-height: 0; overflow: hidden; }
+      .case-layout > aside { display: flex; flex-direction: column; }
+      .case-layout > aside .suspects { min-height: 0; overflow-y: auto; }
+      .case-layout > aside .actions { margin-top: auto; }
+      #phase-one-status, #phase-two-status { overflow-wrap: anywhere; }
+    }
+
+    @media (max-width: 760px) {
+      .masthead { align-items: start; flex-direction: column; }
+      .case-layout { grid-template-columns: 1fr; }
+      .timer { align-self: stretch; }
+      .clues { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .app { padding-top: 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .clues { grid-template-columns: 1fr; }
+      .case-layout { display: block; }
+      .case-layout > aside { margin-top: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">Interactive Detective Investigation</p>
+        <h1>Case Files</h1>
+      </div>
+      <div id="timer" class="timer" aria-live="polite">30:00</div>
+    </header>
+    <div class="game-stats" aria-live="polite">
+      <span>Score: <b id="score">100</b></span>
+      <span>Difficulty: <b id="difficulty-label">Standard</b></span>
+    </div>
+    <div class="case-picker" aria-label="Case selection">
+      <label>Case
+        <select id="case-select">
+          <option value="vanishing-hour">The Vanishing Hour</option>
+          <option value="silent-platform">The Silent Platform</option>
+          <option value="glass-orchid">The Glass Orchid</option>
+          <option value="midnight-manor">The Midnight Manor</option>
+          <option value="hollow-radio">The Hollow Radio</option>
+          <option value="winter-theatre">The Winter Theatre</option>
+          <option value="blackwater-lighthouse">The Blackwater Lighthouse</option>
+        </select>
+      </label>
+      <label>Difficulty
+        <select id="difficulty-select">
+          <option value="easy">Easy</option>
+          <option value="standard" selected>Standard</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+    </div>
+
+    <section id="phase-one" aria-labelledby="phase-one-title">
+      <div class="phase">Phase 01 · Missing Person</div>
+      <div class="case-layout">
+        <div>
+          <article class="panel case-intro">
+            <h2 id="phase-one-title">The Vanishing Hour</h2>
+            <p id="phase-one-description">Archivist Lena Vale disappeared from the Ashcroft Museum between 21:00 and 22:00. Search the evidence, compare the alibis, and identify the prime suspect before the clock runs out.</p>
+            <p class="eyebrow">Field note · Select evidence, then make your accusation.</p>
+          </article>
+          <div id="clues" class="clues" aria-label="Evidence clues"></div>
+          <p id="phase-one-status" class="status" role="status"></p>
+        </div>
+        <aside class="panel">
+          <h2>Persons of Interest</h2>
+          <div id="suspects" class="suspects" role="radiogroup" aria-label="Select a suspect"></div>
+          <div class="actions">
+            <button id="accuse" class="primary" type="button">Make accusation</button>
+            <button id="reset" class="secondary" type="button">Reset case</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="phase-two" class="hidden" aria-labelledby="phase-two-title">
+      <div class="phase">Phase 02 · Murder Investigation</div>
+      <div class="case-layout">
+        <div>
+          <article class="panel case-intro">
+            <h2 id="phase-two-title">The Red Ledger</h2>
+            <p id="phase-two-description">The search ended too late. Lena Vale has been found dead in the museum archive. The missing ledger is now a murder weapon, and a new set of suspects has entered the case.</p>
+            <p class="eyebrow">New objective · Find the killer.</p>
+          </article>
+          <div id="murder-clues" class="clues" aria-label="Murder evidence"></div>
+          <p id="phase-two-status" class="status" role="status"></p>
+        </div>
+        <aside class="panel">
+          <h2>New Suspects</h2>
+          <div id="murder-suspects" class="suspects" role="radiogroup" aria-label="Select a murder suspect"></div>
+          <div class="actions">
+            <button id="solve-murder" class="primary" type="button">Name the killer</button>
+            <button id="reset-phase-two" class="secondary" type="button">Reset case</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div id="result-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <div class="overlay-card">
+      <p class="eyebrow">Case update</p>
+      <h2 id="result-title"></h2>
+      <p id="result-text"></p>
+      <button id="continue-button" class="primary" type="button">Continue investigation</button>
+    </div>
+  </div>
+
+  <div id="evidence-overlay" class="overlay evidence-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="evidence-title">
+    <div class="overlay-card">
+      <p class="eyebrow">Evidence file</p>
+      <h2 id="evidence-title"></h2>
+      <p id="evidence-text"></p>
+      <p class="evidence-cost">Inspection cost · 05:00</p>
+      <button id="close-evidence" class="primary" type="button">Close evidence</button>
+    </div>
+  </div>
+
+  <script>
+    const phaseOneData = {
+      answer: "mara",
+      clues: [
+        ["Clock-in card", "The east wing guard logged Mara Quinn at 21:07, but no exit was recorded."],
+        ["Wet footprint", "A narrow print leads from the archive to the staff staircase."],
+        ["Torn ribbon", "A silver-blue ribbon was caught on the archive latch."],
+        ["Visitor ledger", "Mara signed the visitor ledger with a different pen from the one found in her office."],
+        ["Dusty display", "One display case was opened from inside the archive, not from the public gallery."],
+        ["Voicemail", "Lena's final voicemail mentions a conservator who knew the service route."]
+      ],
+      suspects: [
+        ["mara", "Mara Quinn", "Museum conservator", "Claims she left at 20:45 to collect restoration solvent."],
+        ["owen", "Owen Price", "Night guard", "Says he stayed at the front desk all evening."],
+        ["iris", "Iris Vale", "Lena's sister", "Says she waited in the public gallery until closing."]
+      ]
+    };
+
+    const phaseTwoData = {
+      answer: "owen",
+      clues: [
+        ["Archive key", "The key was found in Owen's desk, wiped clean except for a trace of red sealing wax."],
+        ["Security gap", "The cameras were disabled from the guard station at 21:43."],
+        ["The ledger", "Lena's final note reads: 'The person who watches the door knows the truth.'"],
+        ["Red wax", "The red sealing wax matches the guard station's emergency lockbox."],
+        ["Boot print", "A fresh boot print crosses the archive dust and matches Owen's work boots."],
+        ["Radio log", "Owen's radio transmitted from the archive corridor during the camera blackout."]
+      ],
+      suspects: [
+        ["owen", "Owen Price", "Night guard", "Had access to every camera and the archive key."],
+        ["mara", "Mara Quinn", "Museum conservator", "Was seen near the archive earlier that night."],
+        ["silas", "Silas Reed", "Private collector", "Had a dispute with Lena over a stolen artifact."]
+      ]
+    };
+
+    const caseCatalog = {
+      "vanishing-hour": { title: "The Vanishing Hour", phaseOne: phaseOneData, phaseTwo: phaseTwoData },
+      "silent-platform": {
+        title: "The Silent Platform",
+        phaseOne: {
+          answer: "noah",
+          clues: [["Ticket stub", "Noah's ticket was punched after the last train departed."], ["Blue scarf", "A blue scarf was found beside the locked service door."], ["Station log", "The platform lights were manually switched off at 23:18."], ["Signal grease", "Fresh grease on the service gate matches the signal room tools."], ["Lost timetable", "A timetable page is marked with the exact minute Noah disappeared."], ["Platform bell", "The final bell was rung from the restricted control panel."]],
+          suspects: [["noah", "Noah Bell", "Station porter", "Says he left before the final train."], ["clara", "Clara Moss", "Commuter", "Claims she never entered the service area."], ["ravi", "Ravi Stone", "Ticket inspector", "Says he was counting fares in the booth."]]
+        },
+        phaseTwo: {
+          answer: "clara",
+          clues: [["Service key", "A duplicate service key was found in Clara's travel case."], ["Blackout map", "The blackout route leads directly behind Clara's platform."], ["Last message", "The victim's phone recorded: 'She knew the old tunnel.'"], ["Tunnel dust", "The victim's coat carries dust from the abandoned tunnel."], ["Ticket punch", "A hidden punch mark proves Clara entered the service platform."], ["Faded photograph", "A photograph shows Clara knew the station layout before that night."]],
+          suspects: [["clara", "Clara Moss", "Commuter", "Had the service key and knew the tunnel."], ["noah", "Noah Bell", "Station porter", "Had access to the platform office."], ["ravi", "Ravi Stone", "Ticket inspector", "Was seen near the signal room."]]
+        }
+      },
+      "glass-orchid": {
+        title: "The Glass Orchid",
+        phaseOne: {
+          answer: "elias",
+          clues: [["Gallery pass", "Elias's pass opened the exhibit after closing."], ["Dust trail", "White dust leads from the sculpture room to the loading bay."], ["Courier note", "A courier waited for a package no one had ordered."], ["Polishing cloth", "A cloth bearing Elias's studio compound was found under the plinth."], ["Inventory stamp", "The missing sculpture was removed under an altered inventory stamp."], ["Delivery seal", "The courier's package seal was replaced after the exhibit closed."]],
+          suspects: [["elias", "Elias Hart", "Sculptor", "Claims his pass was left in the studio."], ["nina", "Nina Cole", "Curator", "Says she locked the exhibit at 20:00."], ["tomas", "Tomas Vale", "Courier", "Says he delivered nothing that evening."]]
+        },
+        phaseTwo: {
+          answer: "nina",
+          clues: [["Broken seal", "The curator's seal was found inside the display case."], ["Inventory gap", "Nina changed the inventory ten minutes before the alarm."], ["Glove fiber", "A matching fiber was found on the archive latch."], ["Key cabinet", "The exhibit key cabinet was opened with Nina's private code."], ["Floor plan", "A hidden route on Nina's floor plan bypasses the alarm."], ["Orchid fragment", "A glass fragment from the display is embedded in Nina's glove."]],
+          suspects: [["nina", "Nina Cole", "Curator", "Controlled the inventory and exhibit seals."], ["elias", "Elias Hart", "Sculptor", "Had a motive to reclaim the sculpture."], ["tomas", "Tomas Vale", "Courier", "Had access to the loading bay."]]
+        }
+      },
+      "midnight-manor": {
+        title: "The Midnight Manor",
+        phaseOne: {
+          answer: "beatrice",
+          clues: [
+            ["Locked conservatory", "Beatrice's key opened the conservatory after the family alarm was set."],
+            ["Muddy umbrella", "A muddy umbrella was found beside the servants' entrance."],
+            ["Burned letter", "A half-burned letter names a meeting at midnight."],
+            ["Family portrait", "A portrait was moved to hide a narrow passage."],
+            ["Clockwork box", "The manor clock stopped exactly when Beatrice left the house."],
+            ["Garden glove", "A glove with greenhouse soil was found near the missing person's window."]
+          ],
+          suspects: [
+            ["beatrice", "Beatrice Shaw", "Estate manager", "Claims she was checking the greenhouse."],
+            ["jonas", "Jonas Reed", "Heir", "Says he was asleep in the west wing."],
+            ["celia", "Celia Frost", "Housekeeper", "Claims she never left the kitchen."]
+          ]
+        },
+        phaseTwo: {
+          answer: "jonas",
+          clues: [
+            ["Hidden will", "The missing person's new will would remove Jonas from the inheritance."],
+            ["Candle wax", "Wax from Jonas's private study was found beside the body."],
+            ["Dusty passage", "The concealed passage ends at Jonas's bedroom."],
+            ["Broken watch", "The watch stopped during a struggle in the study."],
+            ["Ink bottle", "A note at the crime scene uses ink from Jonas's desk."],
+            ["Servant bell", "The bell was disabled from inside Jonas's room."]
+          ],
+          suspects: [
+            ["jonas", "Jonas Reed", "Heir", "Had the strongest motive and knew the passage."],
+            ["beatrice", "Beatrice Shaw", "Estate manager", "Had every manor key."],
+            ["celia", "Celia Frost", "Housekeeper", "Found the body before dawn."]
+          ]
+        }
+      },
+      "hollow-radio": {
+        title: "The Hollow Radio",
+        phaseOne: {
+          answer: "felix",
+          clues: [
+            ["Static recording", "The radio broadcast captured Felix's voice after he claimed he had left."],
+            ["Copper wire", "A cut wire links the studio to the locked broadcast booth."],
+            ["Red notebook", "The missing host's notes warn about a hidden second signal."],
+            ["Studio key", "Felix signed out the only spare key at 22:12."],
+            ["Wet coat", "A wet coat matching Felix's was found in the transmitter room."],
+            ["Listener card", "A listener reported hearing footsteps behind the broadcast."]
+          ],
+          suspects: [
+            ["felix", "Felix Ward", "Sound engineer", "Says he was repairing equipment across town."],
+            ["uma", "Uma Bell", "Radio host", "Claims she was preparing tomorrow's show."],
+            ["grant", "Grant Hale", "Station owner", "Says he locked the studio himself."]
+          ]
+        },
+        phaseTwo: {
+          answer: "grant",
+          clues: [
+            ["Power ledger", "Grant authorized an undocumented power cut at the transmitter."],
+            ["Bloodied dial", "The damaged dial carries Grant's distinctive ring mark."],
+            ["Contract file", "The victim planned to expose Grant's illegal broadcasts."],
+            ["Back-up tape", "A hidden tape records Grant entering the booth."],
+            ["Burned receipt", "A receipt places Grant at the station after closing."],
+            ["Locked drawer", "The murder weapon's key was hidden in Grant's desk."]
+          ],
+          suspects: [
+            ["grant", "Grant Hale", "Station owner", "Controlled the station and wanted the broadcast buried."],
+            ["felix", "Felix Ward", "Sound engineer", "Had technical access to the transmitter."],
+            ["uma", "Uma Bell", "Radio host", "Was the last person to speak with the victim."]
+          ]
+        }
+      },
+      "winter-theatre": {
+        title: "The Winter Theatre",
+        phaseOne: {
+          answer: "marcel",
+          clues: [
+            ["Stage blood", "A fresh stage-blood packet was missing from Marcel's prop cabinet."],
+            ["Empty dressing room", "Marcel's dressing room was locked from the outside."],
+            ["Snowy footprint", "A single footprint crosses the backstage loading area."],
+            ["Prop list", "A prop was checked out under Marcel's initials."],
+            ["Curtain rope", "The curtain rope was cut with a backstage utility blade."],
+            ["Ticket stub", "A reserved seat was held for someone who never entered the theatre."]
+          ],
+          suspects: [
+            ["marcel", "Marcel Voss", "Stage director", "Claims he watched the rehearsal from the balcony."],
+            ["elena", "Elena March", "Lead actor", "Says she stayed in makeup until curtain call."],
+            ["peter", "Peter Quill", "Stagehand", "Claims he repaired the lighting rig."]
+          ]
+        },
+        phaseTwo: {
+          answer: "elena",
+          clues: [
+            ["Script page", "The victim marked a script page with Elena's private rehearsal code."],
+            ["Makeup mirror", "The mirror records Elena entering the locked dressing room."],
+            ["Missing ring", "A ring from Elena's costume is found beside the body."],
+            ["Stage map", "Elena's annotated map shows a hidden exit."],
+            ["Prop inventory", "The murder prop was signed back in by Elena."],
+            ["Final cue", "The final lighting cue was triggered from Elena's console."]
+          ],
+          suspects: [
+            ["elena", "Elena March", "Lead actor", "Had access to the costume and hidden exit."],
+            ["marcel", "Marcel Voss", "Stage director", "Controlled every rehearsal schedule."],
+            ["peter", "Peter Quill", "Stagehand", "Was working behind the curtain."]
+          ]
+        }
+      },
+      "blackwater-lighthouse": {
+        title: "The Blackwater Lighthouse",
+        phaseOne: {
+          answer: "agnes",
+          clues: [
+            ["Lantern log", "Agnes recorded a lighthouse inspection during the hour she claimed to be asleep."],
+            ["Salt-stained rope", "A rope leads from the cliff path to the sealed boathouse."],
+            ["Missing flare", "One emergency flare was removed without being logged."],
+            ["Compass mark", "A compass was scratched with Agnes's initials."],
+            ["Wet footprints", "The footprints stop at the lighthouse keeper's private door."],
+            ["Fog bell", "The fog bell rang three times without a ship in the channel."]
+          ],
+          suspects: [
+            ["agnes", "Agnes Pike", "Lighthouse keeper", "Claims the storm kept her inside all night."],
+            ["rowan", "Rowan Gray", "Fisherman", "Says he never reached the cliff path."],
+            ["hugo", "Hugo Vale", "Coast officer", "Claims he was checking the radio beacon."]
+          ]
+        },
+        phaseTwo: {
+          answer: "hugo",
+          clues: [
+            ["Beacon switch", "The beacon was disabled from Hugo's service panel."],
+            ["Coast report", "Hugo altered the weather report before the murder."],
+            ["Signal flare", "The missing flare was found in Hugo's patrol locker."],
+            ["Radio transcript", "A hidden transmission places Hugo near the boathouse."],
+            ["Rope fiber", "The rope fiber matches Hugo's patrol harness."],
+            ["Tide chart", "Only Hugo's route reaches the crime scene at low tide."]
+          ],
+          suspects: [
+            ["hugo", "Hugo Vale", "Coast officer", "Had the equipment and falsified the report."],
+            ["agnes", "Agnes Pike", "Lighthouse keeper", "Knew every room in the lighthouse."],
+            ["rowan", "Rowan Gray", "Fisherman", "Had a boat near the cliff."]
+          ]
+        }
+      }
+    };
+
+    const difficultySettings = {
+      easy: { label: "Easy", clueCost: 3 * 60 },
+      standard: { label: "Standard", clueCost: 5 * 60 },
+      hard: { label: "Hard", clueCost: 7 * 60 }
+    };
+
+    const caseDescriptions = {
+      "vanishing-hour": [
+        "Archivist Lena Vale disappeared from the Ashcroft Museum between 21:00 and 22:00. Search the evidence, compare the alibis, and identify the prime suspect before the clock runs out.",
+        "Lena Vale has been found dead in the museum archive. The missing ledger is now a murder weapon, and a new set of suspects has entered the case."
+      ],
+      "silent-platform": [
+        "Noah Bell vanished from the final platform after the station lights failed. Search the station evidence and identify who entered the restricted service area.",
+        "A body has been found beside the silent platform. The blackout was deliberate, and the killer is among the people who knew the old tunnel."
+      ],
+      "glass-orchid": [
+        "A rare glass orchid disappeared from a locked exhibition after closing. Follow the gallery trail and identify who had access to the display.",
+        "The missing orchid has become the center of a murder scene. Examine the broken seal, altered inventory, and hidden route to find the killer."
+      ],
+      "midnight-manor": [
+        "A guest vanished from the Midnight Manor during a storm. Search the locked rooms, garden trail, and family secrets to find the prime suspect.",
+        "The manor's hidden passage now conceals a murder. The inheritance, the study, and the final bell point toward a dangerous secret."
+      ],
+      "hollow-radio": [
+        "A late-night radio host disappeared during a live broadcast. Trace the static signal, studio keys, and transmitter logs to find the prime suspect.",
+        "The broadcast booth is now a murder scene. A hidden recording and a falsified power cut reveal who controlled the station after dark."
+      ],
+      "winter-theatre": [
+        "A performer vanished backstage before the winter premiere. Inspect the props, dressing rooms, and stage machinery to identify the prime suspect.",
+        "The theatre's final cue concealed a murder. Follow the costume, script, and hidden exit evidence to expose the killer."
+      ],
+      "blackwater-lighthouse": [
+        "A visitor disappeared during a fogbound night at Blackwater Lighthouse. Search the lantern logs, cliff path, and boathouse clues.",
+        "The lighthouse keeper's report hides a murder. Trace the beacon, tide, and radio evidence to identify who controlled the coast."
+      ]
+    };
+
+    let activeCase = caseCatalog["vanishing-hour"];
+    let activeCaseKey = "vanishing-hour";
+    let activePhaseOneData = activeCase.phaseOne;
+    let activePhaseTwoData = activeCase.phaseTwo;
+    let selectedDifficulty = difficultySettings.standard;
+    let secondsRemaining = 30 * 60;
+    let score = 100;
+    let phaseOneComplete = false;
+    let phaseTwoActive = false;
+    let timerId;
+    let gameEnded = false;
+
+    const $ = (selector) => document.querySelector(selector);
+
+    function updateCaseText() {
+      const descriptions = caseDescriptions[activeCaseKey];
+      $("#phase-one-description").textContent = descriptions[0];
+      $("#phase-two-description").textContent = descriptions[1];
+    }
+
+    function renderItems(data, cluesSelector, suspectsSelector) {
+      $(cluesSelector).innerHTML = data.clues.map(([title, text], index) => `
+        <button class="clue" type="button" data-clue="${index}">
+          <strong>${title}</strong>
+          <span>Click to inspect evidence</span>
+        </button>
+      `).join("");
+
+      $(suspectsSelector).innerHTML = data.suspects.map(([id, name, role, alibi]) => `
+        <label class="suspect">
+          <input type="radio" name="${suspectsSelector.slice(1)}" value="${id}">
+          <h3>${name}</h3>
+          <div class="role">${role}</div>
+          <p class="alibi">${alibi}</p>
+        </label>
+      `).join("");
+    }
+
+    function updateTimer() {
+      secondsRemaining = Math.max(0, secondsRemaining);
+      const minutes = Math.floor(secondsRemaining / 60);
+      const seconds = secondsRemaining % 60;
+      $("#timer").textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      $("#timer").classList.toggle("warning", secondsRemaining <= 60);
+      $("#score").textContent = score;
+      $(".evidence-cost").textContent = `Inspection cost · ${String(selectedDifficulty.clueCost / 60).padStart(2, "0")}:00`;
+    }
+
+    function stopTimer() {
+      if (timerId !== undefined) {
+        clearInterval(timerId);
+        timerId = undefined;
+      }
+    }
+
+    function startTimer() {
+      stopTimer();
+      timerId = setInterval(tick, 1000);
+    }
+
+    function getSuspectName(data, id) {
+      const suspect = data.suspects.find(([suspectId]) => suspectId === id);
+      return suspect ? suspect[1] : "the selected suspect";
+    }
+
+    function showResult(title, text, showContinue = true) {
+      $("#result-title").textContent = title;
+      $("#result-text").textContent = text;
+      $("#continue-button").textContent = showContinue ? "Continue investigation" : "Close result";
+      $("#continue-button").classList.remove("hidden");
+      $("#result-overlay").classList.remove("hidden");
+      $("#continue-button").focus();
+    }
+
+    function enterPhaseTwo(title = "Time ran out", text = "The missing-person case has become a murder investigation. The body is in the archive. Find the killer.") {
+      if (phaseTwoActive || gameEnded) return;
+      phaseTwoActive = true;
+      phaseOneComplete = true;
+      $("#phase-one").classList.add("hidden");
+      $("#phase-two").classList.remove("hidden");
+      $("#evidence-overlay").classList.add("hidden");
+      score = 50;
+      secondsRemaining = 30 * 60;
+      renderItems(activePhaseTwoData, "#murder-clues", "#murder-suspects");
+      $("#phase-two-title").textContent = `${activeCase.title} · Murder`;
+      updateCaseText();
+      updateTimer();
+      startTimer();
+      showResult(title, text, true);
+    }
+
+    function selectClue(event) {
+      const clue = event.target.closest(".clue");
+      if (!clue || gameEnded) return;
+
+      const data = clue.closest("#clues") ? activePhaseOneData : activePhaseTwoData;
+      const clueIndex = Number(clue.dataset.clue);
+      const [title, text] = data.clues[clueIndex];
+      clue.classList.add("selected");
+      $("#evidence-title").textContent = title;
+      $("#evidence-text").textContent = text;
+      $("#evidence-overlay").classList.remove("hidden");
+      $("#close-evidence").focus();
+
+      secondsRemaining = Math.max(0, secondsRemaining - selectedDifficulty.clueCost);
+      updateTimer();
+
+      if (secondsRemaining === 0 && !phaseTwoActive) {
+        enterPhaseTwo();
+      }
+    }
+
+    function makeAccusation() {
+      if (gameEnded || phaseTwoActive) return;
+      const selected = document.querySelector('input[name="suspects"]:checked');
+      if (!selected) {
+        $("#phase-one-status").textContent = "Select a suspect before making an accusation.";
+        $("#phase-one-status").className = "status error";
+        return;
+      }
+      if (selected.value === activePhaseOneData.answer) {
+        phaseOneComplete = true;
+        gameEnded = true;
+        stopTimer();
+        score = 100;
+        updateTimer();
+        const suspectName = getSuspectName(activePhaseOneData, selected.value);
+        $("#phase-one-status").textContent = `Correct. ${suspectName} is the prime suspect. The missing-person case is solved.`;
+        $("#phase-one-status").className = "status success";
+        showResult("Case solved", `You identified ${suspectName} before the thirty-minute deadline.`, false);
+      } else {
+        enterPhaseTwo(
+          "Wrong accusation",
+          `The accusation against ${getSuspectName(activePhaseOneData, selected.value)} was wrong. The missing-person case has escalated into a murder investigation.`
+        );
+      }
+    }
+
+    function solveMurder() {
+      if (gameEnded || !phaseTwoActive) return;
+      const selected = document.querySelector('input[name="murder-suspects"]:checked');
+      if (!selected) {
+        $("#phase-two-status").textContent = "Select a suspect before naming the killer.";
+        $("#phase-two-status").className = "status error";
+        return;
+      }
+      if (selected.value === activePhaseTwoData.answer) {
+        gameEnded = true;
+        stopTimer();
+        const suspectName = getSuspectName(activePhaseTwoData, selected.value);
+        $("#phase-two-status").textContent = `Correct. ${suspectName} is the killer. The murder case is solved.`;
+        $("#phase-two-status").className = "status success";
+        showResult("Murder solved", `The evidence identifies ${suspectName}. Justice has been served.`, false);
+      } else {
+        score -= 100;
+        updateTimer();
+        gameEnded = true;
+        $("#phase-two-status").textContent = `Investigation failed. Score penalty: -100. Final score: ${score}.`;
+        $("#phase-two-status").className = "status error";
+        stopTimer();
+        showResult("Case lost", "The wrong killer was named. The case is closed, and 100 points have been deducted.", false);
+      }
+    }
+
+    function resetGame() {
+      stopTimer();
+      activeCase = caseCatalog["vanishing-hour"];
+      activeCaseKey = "vanishing-hour";
+      activePhaseOneData = activeCase.phaseOne;
+      activePhaseTwoData = activeCase.phaseTwo;
+      selectedDifficulty = difficultySettings.standard;
+      secondsRemaining = 30 * 60;
+      score = 100;
+      phaseOneComplete = false;
+      phaseTwoActive = false;
+      gameEnded = false;
+      $("#case-select").value = "vanishing-hour";
+      $("#difficulty-select").value = "standard";
+      $("#difficulty-label").textContent = selectedDifficulty.label;
+      $("#phase-one-title").textContent = activeCase.title;
+      $("#phase-two-title").textContent = `${activeCase.title} · Murder`;
+      updateCaseText();
+      $("#phase-one").classList.remove("hidden");
+      $("#phase-two").classList.add("hidden");
+      $("#result-overlay").classList.add("hidden");
+      $("#evidence-overlay").classList.add("hidden");
+      $("#phase-one-status").textContent = "";
+      $("#phase-two-status").textContent = "";
+      renderItems(activePhaseOneData, "#clues", "#suspects");
+      updateTimer();
+      startTimer();
+    }
+
+    renderItems(activePhaseOneData, "#clues", "#suspects");
+    $("#clues").addEventListener("click", selectClue);
+    $("#murder-clues").addEventListener("click", selectClue);
+    $("#accuse").addEventListener("click", makeAccusation);
+    $("#solve-murder").addEventListener("click", solveMurder);
+    $("#reset").addEventListener("click", resetGame);
+    $("#reset-phase-two").addEventListener("click", resetGame);
+    $("#continue-button").addEventListener("click", () => $("#result-overlay").classList.add("hidden"));
+    $("#close-evidence").addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      $("#evidence-overlay").classList.add("hidden");
+    });
+
+    $("#case-select").addEventListener("change", (event) => {
+      activeCaseKey = event.target.value;
+      activeCase = caseCatalog[activeCaseKey];
+      activePhaseOneData = activeCase.phaseOne;
+      activePhaseTwoData = activeCase.phaseTwo;
+      stopTimer();
+      secondsRemaining = 30 * 60;
+      score = 100;
+      phaseOneComplete = false;
+      phaseTwoActive = false;
+      gameEnded = false;
+      $("#phase-one-title").textContent = activeCase.title;
+      $("#phase-two-title").textContent = `${activeCase.title} · Murder`;
+      updateCaseText();
+      $("#phase-one").classList.remove("hidden");
+      $("#phase-two").classList.add("hidden");
+      $("#result-overlay").classList.add("hidden");
+      $("#evidence-overlay").classList.add("hidden");
+      $("#phase-one-status").textContent = "";
+      $("#phase-two-status").textContent = "";
+      renderItems(activePhaseOneData, "#clues", "#suspects");
+      updateTimer();
+      startTimer();
+    });
+
+    $("#difficulty-select").addEventListener("change", (event) => {
+      selectedDifficulty = difficultySettings[event.target.value];
+      $("#difficulty-label").textContent = selectedDifficulty.label;
+      updateTimer();
+    });
+
+    function tick() {
+      if (gameEnded || (phaseOneComplete && !phaseTwoActive)) return;
+      secondsRemaining -= 1;
+      updateTimer();
+      if (secondsRemaining <= 0) {
+        secondsRemaining = 0;
+        updateTimer();
+        if (phaseTwoActive) {
+          gameEnded = true;
+          score -= 100;
+          updateTimer();
+          stopTimer();
+          showResult("Case lost", "Time ran out during the murder investigation. 100 points have been deducted.", false);
+        } else {
+          enterPhaseTwo();
+        }
+      }
+    }
+
+    updateTimer();
+    startTimer();
+  </script>
+</body>
+</html>
